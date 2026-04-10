@@ -8,6 +8,8 @@
 TCB* currTCB = NULL;
 TCB* nextTCB = NULL;
 
+uint32_T time_slice = 0;
+
 
 // TODO: 1. GET RID OF THESE TaskSP by putting the sp as the first field of the TCB. 
 //       2. LEARN function pointers correctly to load the task routine for the first time when the scheduler fires up. 
@@ -30,6 +32,14 @@ void tiny_scheduler() {
     //     return;
     // }
 
+    // Time slice logic
+    time_slice++;
+
+    if (time_slice != 5) {
+        return;
+    }
+
+    time_slice = 0; // reset time_slice
     currTCB = nextTCB;
 
 
