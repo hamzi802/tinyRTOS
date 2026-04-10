@@ -7,3 +7,7 @@ By default, when we do HAL_Config, it sets up the interrupt to trigger every 1ms
 So, no need to do that using the SysTick_Config(ticks) function from CMSIS.
 
 
+
+# TODO
+Setup how a task would end i.e cleared firtly from the ready queue and then its pointer is returned
+back to the TCB Object Pool.

@@ -1,4 +1,5 @@
 #include "queue.h"
+#include <cassert>
 
 // Our QUEUE Convention
 // Tail -> write
@@ -41,6 +42,7 @@ bool enqueue(queue* q, TCB* tcb) {
     return true;
 }
 
+// returns NULL if q is empty
 TCB* dequeue(queue* q) {
     // queue is empty 
     if (q->head == q->tail) {
@@ -53,3 +55,7 @@ TCB* dequeue(queue* q) {
     return tcb;
 }
 
+// returns NULL if queue is empty
+TCB* getHead(queue* q) {
+    return q->tasks[q->head];
+}

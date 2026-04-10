@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "kernel.h"
 #include "stm32f401xc.h"
 #include "system_stm32f4xx.h"
 
@@ -75,7 +76,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
+  HAL_NVIC_DisableIRQ(SysTick_IRQn); // we only run it after starting our scheduler.
+  kernel_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -89,6 +91,11 @@ int main(void)
   /* USER CODE BEGIN 2 */
   NVIC_SetPriority(PendSV_IRQn, 0xFF); // PendSV gets lowest possible priority
 
+  // Create a few tasks (minimum 2).
+  // After creating the tasks, must run scheduler_start(). 
+  
+  // Enable interrupts.
+  HAL_NVIC_EnableIRQ(SysTick_IRQn);
   /* USER CODE END 2 */
 
   /* Infinite loop */
