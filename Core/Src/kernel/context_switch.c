@@ -1,8 +1,8 @@
 #include "kernel.h"
 #include "stm32f401xc.h"
 #include "stm32f4xx_hal_cortex.h"
-#include <cassert>
 #include <stdint.h>
+#include <stdbool.h>
 
 
 TCB* prevTCB = NULL;
@@ -56,7 +56,7 @@ void start_scheduler() {
     // to pop registers R0-R3, R12, LC, xPSR from our stack.
     currTCB->sp += 8;   
     __set_PSP((uint32_t) currTCB->sp);
-    __set_CONTROL(0x02)  // This means: nPRIV = 0, SPSEL = 1, FPCA = 0 : in CONTROL, only 3 LSB are used.
+    __set_CONTROL(0x02);  // This means: nPRIV = 0, SPSEL = 1, FPCA = 0 : in CONTROL, only 3 LSB are used.
     __ISB();  // makes sure control register is fully applied 
 
     // We do EXC_RETURN now. The CPU kind of abandons this fucntion after we return by simulating this as exception return.

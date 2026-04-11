@@ -12,18 +12,18 @@
 extern TCB* prevTCB;
 extern TCB* currTCB;
 
-enum TaskPriority{
+typedef enum{
     PRIORITY_HIGH,
     PRIORITY_MEDIUM,
     PRIORITY_LOW,    
     PRIORITY_IDLE
-}
+}TaskPriority;
 
-enum TaskState {
+typedef enum{
     TASK_READY,
     TASK_BLOCKED,
     TASK_TIME_DELAY
-}
+} TaskState ;
 
 typedef struct {
     _Alignas(8) uint8_t data[STACK_SIZE];           // member aligned

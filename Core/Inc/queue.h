@@ -14,17 +14,17 @@ TCB* getHead(queue* q);
 
 // BLOCK QUEUE
 
-typedef struct TCBNodeLL TCBNodeLL;  
+typedef struct TCBNodeDPQ TCBNodeDPQ;  
 
-struct TCBNodeLL{
+struct TCBNodeDPQ{
   TCB* tcb;
-  TCBNodeLL* next;
-  TCBNodeLL* prev;
+  TCBNodeDPQ* next;
+  TCBNodeDPQ* prev;
   uint32_t delay_ticks;
 };
 
 
-void init_pq(TCBNodeLL* node_pool, int length, TCBNodeLL* free_head, TCBNodeLL* active_head);
-TCBNodeLL* pq_insert(TCBNodeLL* active_head, TCBNodeLL* free_head, TCB* tcb, uint32_t delay_ticks);
-TCBNodeLL* pq_dequeue(TCBNodeLL* active_head, TCBNodeLL* free_head);
-TCBNodeLL* getHead(TCBNodeLL* active_head);
+void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head, TCBNodeDPQ* active_head);
+TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength, TCB* tcb, uint32_t delay_ticks);
+TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength);
+TCBNodeDPQ* pq_getHead(TCBNodeDPQ* active_head);

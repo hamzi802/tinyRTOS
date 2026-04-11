@@ -1,5 +1,10 @@
 #include "queue.h"
-#include <cassert>
+#include "stdbool.h"
+#include "stdint.h"
+#include "kernel.h"
+#include "string.h"
+#include "stm32f401xc.h"
+#include <stdint.h>
 
 // Our QUEUE Convention
 // Tail -> write
@@ -27,7 +32,7 @@ void init_queue(queue* q, TCB** tcbArr, uint32_t size) {
 }
 
 bool enqueue(queue* q, TCB* tcb) {
-    uint32_t next = (q->tail + 1) % size;
+    uint32_t next = (q->tail + 1) % q->size;
 
     // queue is full
     if (next == q->head) {
@@ -50,7 +55,7 @@ TCB* dequeue(queue* q) {
     }
 
     TCB* tcb = q->tasks[q->head];
-    q->head = (q->head + 1) % size;
+    q->head = (q->head + 1) % q->size;
 
     return tcb;
 }
@@ -63,9 +68,9 @@ TCB* getHead(queue* q) {
 // ----------------------------------------
 // PRIORITY QUEUE FOR BLOCK TASKS: PRIORITY IS DELAY TICKS
 
-void init_pq(TCBNodeLL* node_pool, int length, TCBNodeLL* free_head,
-             TCBNodeLL* active_head) {
-  memset(node_pool, 0, sizeof(TCBNodeLL) * length);
+void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head,
+             TCBNodeDPQ* active_head) {
+  memset(node_pool, 0, sizeof(TCBNodeDPQ) * length);
 
   // active list starts empty
   active_head->next = NULL;
@@ -82,8 +87,8 @@ void init_pq(TCBNodeLL* node_pool, int length, TCBNodeLL* free_head,
   node_pool[length - 1].next = NULL;
 }
 
-TCBNodeLL* pq_insert(TCBNodeLL* active_head, TCBNodeLL* free_head, TCB* tcb, uint32_t delay_ticks) {
-  TCBNodeLL* node = free_head->next;
+TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength, TCB* tcb, uint32_t delay_ticks) {
+  TCBNodeDPQ* node = free_head->next;
   if (node == NULL) return NULL;  // no space in pool.
 
   // detach from free_head
@@ -95,7 +100,7 @@ TCBNodeLL* pq_insert(TCBNodeLL* active_head, TCBNodeLL* free_head, TCB* tcb, uin
   node->delay_ticks = delay_ticks;
 
   // find insertion point based in the active list based on the priority i.e is the delay_ticks
-  TCBNodeLL* curr = active_head;
+  TCBNodeDPQ* curr = active_head;
   while (curr->next != NULL && curr->next->delay_ticks >= delay_ticks){
     curr = curr->next;
   }  
@@ -112,8 +117,8 @@ TCBNodeLL* pq_insert(TCBNodeLL* active_head, TCBNodeLL* free_head, TCB* tcb, uin
 }
 
 // active -> A -> B
-TCBNodeLL* pq_dequeue(TCBNodeLL* active_head, TCBNodeLL* free_head) {
-    TCBNodeLL* node = active_head->next;
+TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength) {
+    TCBNodeDPQ* node = active_head->next;
     if (node == NULL) return NULL;
 
     // detech from active list
@@ -132,6 +137,6 @@ TCBNodeLL* pq_dequeue(TCBNodeLL* active_head, TCBNodeLL* free_head) {
     return node; // caller reads node->tcb before it gets reused
 }
 
-TCBNodeLL* getHead(TCBNodeLL* active_head) {
+TCBNodeDPQ* getHead(TCBNodeDPQ* active_head) {
     return active_head->next;
 }
