@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "queue.h"
+#include "stm32f4xx_hal.h"
 
 
 
+TCB idleTCB;
 
 // Object pool for TCB
-TCBPoolObj tcb_pool[MAX_TASKS] = {0};
+TCBPoolObj tcb_pool[MAX_TASKS] = {0}; 
 TCBPoolObj* freelist = NULL;
 
 // CALL THIS IN INIT CODE OF STM32 to run at startup right away
@@ -82,7 +84,7 @@ TCB* ReadyQueue_popTCB() {
         }
     }
 
-    return NULL;
+    return &idleTCB;
 }
 
 
@@ -103,29 +105,62 @@ void ReadyQueue_pushTCB(TCB* tcb) {
     enqueue(ready_queues[tcb->priority], tcb)
 }
 
+
+// ------------------------------------------
+// DELAY QUEUE
+TCBNodeLL pq_DELAY_pool[MAX_NODES]; // priority queue pool for blocked tasks 
+TCBNodeLL pq_DELAY_active_head;  // sentinel for sorted active list
+TCBNodeLL pq_DELAY_free_head;    // sentinel for free list
+int pq_DELAY_length = 0;
+
+
+void taskDelay(uint32_t delay_ticks) {
+    currTCB->state = TASK_BLOCKED;
+    
+    pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, currTCB, delay_ticks+HAL_GetTick());
+    rtos_request_context_switch();
+}
+
+bool delayTaskReady() {
+    TCBNodeLL* pqDelayHead = pq_getHead(pq_DELAY_active_head);
+    if ( pqDelayHead != NULL && pqDelayHead->delay_ticks == HAL_GetTick()) {
+        return true;
+    }
+}
+
+void activateDelayTask() {
+    TCB* tcb = pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head);     
+    if (tcb == NULL) return NULL; // no task in delay queue. 
+
+    tcb->state = TASK_READY;
+    ReadyQueue_pushTCB(tcb);
+}
+
+
 // --------------------------
 // TASKS
-
-void createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priority) {
+// NOTE: THIS SHOULD NEVER TAKE THE ARGUMENT OF STATE BEING TIME_DELAY
+TCB* createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priority, TaskState state) {
 
     // First we borrow a TCB to use from our TCB pool.
     TCB* tcb;
      
     if ((tcb = borrowTCB()) == NULL) {
         // do something in case we don't find a TCB block to allocate to our new task
-        return;
+        return NULL;
     }
 
     
     tcb->task_name = task_name;
     tcb->sp = NULL;
     tcb->priority = priority;
+    tcb->state = state;
 
 
     // we do the following so that sp points to top of the stack. 
 
     // type conversion done because tcb.taskStack.data is uint8. Stack size is also in bytes.
-    tcb->sp = (uint32_t*) (tcb.taskStack.data + STACK_SIZE);  
+    tcb->sp = (uint32_t*) (tcb->taskStack.data + STACK_SIZE);  
 
 
 
@@ -155,14 +190,38 @@ void createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priori
     *(tcb->sp + 15) = 0x01000000;
 
 
+    // TODO: insert into the block queue if the state is blocked. 
     // Finally, insert this into our ready tasks queue based on priority.
     enqueue(ready_queue[priority], tcb);
+
+    return tcb;
 }
 
+void idleTaskRoutine() {
+    while(1);
+}
 
+void initIdleTCB() {
+    idleTCB = createTask("idle", idleTaskRoutine, PRIORITY_IDLE, TASK_READY);
 
+    idleTCB.tid = MAX_TASKS;
+    tcb->task_name = "idle";
+    tcb->priority = PRIORITY_IDLE;
+    tcb->state = TASK_READY;
+
+    idleTCB.sp = (uint32_t*) (idleTCB.taskStack.data + STACK_SIZE);  
+    idleTCB.sp = idleTCB.sp - 16;
+    *(idleTCB.sp + 14) = (uint32_t) idleTaskRoutine;
+    *(idleTCB.sp + 15) = 0x01000000;
+}
+
+// -------------------------------------
+// KERNEL
 
 void kernel_init() {
     InitializePool();
     initReadyQueue(ready_queuesDB, ready_queues);
+    initIdleTCB();
+
+    init_pq(pq_DELAY_pool, pq_DELAY_length, &pq_DELAY_free_head, &pq_DELAY_active_head);
 }

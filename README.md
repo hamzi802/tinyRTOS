@@ -9,5 +9,6 @@ So, no need to do that using the SysTick_Config(ticks) function from CMSIS.
 
 
 # TODO
-Setup how a task would end i.e cleared firtly from the ready queue and then its pointer is returned
-back to the TCB Object Pool.
+- implement waiting/block etc queues and update the rtoswakeffromblock function so that task is pushed into the blocked state or removed from one.
+- Add rtos delay function that makes the function in block state for the duratioin of the delay.  
+- Handle the schedluer so that it puts the tasks whole time delay has ended into the ready_queue.

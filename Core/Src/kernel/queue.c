@@ -59,3 +59,79 @@ TCB* dequeue(queue* q) {
 TCB* getHead(queue* q) {
     return q->tasks[q->head];
 }
+
+// ----------------------------------------
+// PRIORITY QUEUE FOR BLOCK TASKS: PRIORITY IS DELAY TICKS
+
+void init_pq(TCBNodeLL* node_pool, int length, TCBNodeLL* free_head,
+             TCBNodeLL* active_head) {
+  memset(node_pool, 0, sizeof(TCBNodeLL) * length);
+
+  // active list starts empty
+  active_head->next = NULL;
+  active_head->prev = NULL;
+
+  // chain all nodes in free pool
+  free_head->next = &node_pool[0];
+  node_pool[0].prev = free_head;
+
+  for (int i = 0; i < length - 1; i++) {
+    node_pool[i].next = &node_pool[i + 1];
+    node_pool[i + 1].prev = &node_pool[i];
+  }
+  node_pool[length - 1].next = NULL;
+}
+
+TCBNodeLL* pq_insert(TCBNodeLL* active_head, TCBNodeLL* free_head, TCB* tcb, uint32_t delay_ticks) {
+  TCBNodeLL* node = free_head->next;
+  if (node == NULL) return NULL;  // no space in pool.
+
+  // detach from free_head
+  free_head->next = node->next;
+  if (node->next != NULL) node->next->prev  = free_head;
+
+  // fill this node
+  node->tcb = tcb;  
+  node->delay_ticks = delay_ticks;
+
+  // find insertion point based in the active list based on the priority i.e is the delay_ticks
+  TCBNodeLL* curr = active_head;
+  while (curr->next != NULL && curr->next->delay_ticks >= delay_ticks){
+    curr = curr->next;
+  }  
+
+
+  node->next = curr->next;
+  node->prev = curr;
+  if (curr->next) curr->next->prev = node;
+  curr->next = node;
+
+  pqlength++;
+
+  return node;
+}
+
+// active -> A -> B
+TCBNodeLL* pq_dequeue(TCBNodeLL* active_head, TCBNodeLL* free_head) {
+    TCBNodeLL* node = active_head->next;
+    if (node == NULL) return NULL;
+
+    // detech from active list
+    active_head->next = node->next;
+    if (node->next) node->next->prev = active_head;
+
+    // add to free list
+    node->next = free_head->next;
+    node->prev = free_head;
+
+    if (free_head->next) free_head->next->prev = node;
+    free_head->next = node;
+
+    pqlength--;
+
+    return node; // caller reads node->tcb before it gets reused
+}
+
+TCBNodeLL* getHead(TCBNodeLL* active_head) {
+    return active_head->next;
+}
