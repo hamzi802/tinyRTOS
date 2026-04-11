@@ -95,7 +95,7 @@ bool rtos_wake_task_from_isr(TCB* task) {
 
     task->state = TASK_READY;
 
-    // TODO: add to ready queue after popping from the waiting/blocked queue
+    BlockedQueue_remove(task);
     ReadyQueue_pushTCB(task);
 
     if (task->priority > currTCB->priority) {
@@ -107,6 +107,7 @@ bool rtos_wake_task_from_isr(TCB* task) {
 
 void rtos_request_context_switch(void) {
     // time_slice = 0; // reset time_slice
+    TCB* temp = prevTCB;
     prevTCB = currTCB;
 
     // if the curr task is still ready after it requests context switch then push it into 
@@ -122,6 +123,7 @@ void rtos_request_context_switch(void) {
     // This occurs when a HIGH priority queue only have 1 task in ready state.
     // we keep running this task until this task gets removed from ready state.
     if (currTCB == prevTCB) { 
+        prevTCB = temp;
         return;
     }
 
@@ -135,7 +137,10 @@ void rtos_request_context_switch(void) {
             case TASK_TIME_DELAY:
                 // IGNORE THE CURR_TCB IN THIS CASE AS THIS STATE IS ONLY SET UP BY THE 
                 // taskDelay() which puts the currTCB in the delay queue.
-                break;
+            break;
+            case TASK_BLOCKED:
+                BlockedQueue_insert(prevTCB);
+            break;
         }
     } 
 

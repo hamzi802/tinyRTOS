@@ -87,7 +87,7 @@ void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head,
   node_pool[length - 1].next = NULL;
 }
 
-TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength, TCB* tcb, uint32_t delay_ticks) {
+TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength, TCB* tcb, uint32_t delay_ticks) {
   TCBNodeDPQ* node = free_head->next;
   if (node == NULL) return NULL;  // no space in pool.
 
@@ -111,13 +111,13 @@ TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t p
   if (curr->next) curr->next->prev = node;
   curr->next = node;
 
-  pqlength++;
+  (*pqlength)++;
 
   return node;
 }
 
 // active -> A -> B
-TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength) {
+TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength) {
     TCBNodeDPQ* node = active_head->next;
     if (node == NULL) return NULL;
 
@@ -132,11 +132,72 @@ TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t 
     if (free_head->next) free_head->next->prev = node;
     free_head->next = node;
 
-    pqlength--;
+    (*pqlength)--;
 
     return node; // caller reads node->tcb before it gets reused
 }
 
 TCBNodeDPQ* getHead(TCBNodeDPQ* active_head) {
     return active_head->next;
+}
+
+// -------------------------------------------
+// Blocked queue
+
+void BLL_init(TCBNodeBLL tcbLL[], uint32_t max_size, TCBNodeBLL* head) {
+    head->prev = NULL;
+    head->next = &tcbLL[0];  
+    tcbLL[0].prev = head;
+
+
+    // S  --> A ---> B ---> C ---> D
+    for (int i = 0; i < max_size-1; i++) {
+        tcbLL[i].next = &tcbLL[i+1];
+        tcbLL[i+1].prev = &tcbLL[i];
+    }
+    tcbLL[max_size-1].next = NULL;
+}
+
+TCBNodeBLL* BLL_insert(TCBNodeBLL* head, TCB* tcb, int* length) {
+    TCBNodeBLL* temp = head;
+    for (int i = 0; i < *length; i++) {
+        temp = temp->next;
+    }
+
+    // no more space in our static Doubly LL
+    if (temp->next == NULL) {
+        return NULL;        
+    }
+
+    temp->next->tcb = tcb;
+    (*length)++;
+
+    return temp->next;
+}
+
+TCBNodeBLL* BLL_delete(TCBNodeBLL* head, TCB* tcb, int *length) {
+    TCBNodeBLL* target = head->next;
+
+    for (int i = 0; i < *length; i++) {
+        if (target->tcb == tcb) break;
+
+        target = target->next;
+    }
+
+    // reached end node, its or not matches so no such node in our LL
+    if (target == NULL || target->tcb != tcb)  return NULL;       
+
+    // Now, we switch this target with the last used
+    TCBNodeBLL* last = head;
+    for (int i = 0; i < *length; i++) {
+        last = last->next;
+    }
+
+    target->tcb = last->tcb;
+    last->tcb = NULL;
+    
+
+    (*length)--;
+
+    return target;
 }

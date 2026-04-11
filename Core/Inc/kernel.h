@@ -38,11 +38,10 @@ typedef struct {
     TaskStack taskStack;
 } TCB;
 
-typedef struct TCBPoolObj TCBPoolObj;
-struct TCBPoolObj{
+typedef struct TCBPoolObj {
     TCB tcb;
-    TCBPoolObj* next;
-};
+    struct TCBPoolObj* next;
+} TCBPoolObj;
 
 
 // Kernel
@@ -58,6 +57,10 @@ void initIdleTCB();
 // Ready Queues
 TCB* ReadyQueue_popTCB();
 void ReadyQueue_pushTCB(TCB* tcb);
+
+// Blocked Queue
+void BlockedQueue_remove(TCB* tcb);
+void BlockedQueue_insert(TCB* task);
 
 // TIME DELAY QUEUE
 bool delayTaskReady();

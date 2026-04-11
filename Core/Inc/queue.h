@@ -12,19 +12,28 @@ bool enqueue(queue* q, TCB* tcb);
 TCB* dequeue(queue* q); 
 TCB* getHead(queue* q);
 
-// BLOCK QUEUE
+// BLOCK QUEUE: Linked List actually
+typedef struct TCBNodeBLL{
+    TCB* tcb;
+    struct TCBNodeBLL* next;
+    struct TCBNodeBLL* prev;
+} TCBNodeBLL;
 
-typedef struct TCBNodeDPQ TCBNodeDPQ;  
+void BLL_init(TCBNodeBLL tcbLL[], uint32_t max_size, TCBNodeBLL* head);
+TCBNodeBLL* BLL_insert(TCBNodeBLL* head, TCB* tcb, int* length);
+TCBNodeBLL* BLL_delete(TCBNodeBLL* head, TCB* tcb, int *length);
 
-struct TCBNodeDPQ{
+// Delayed Priority Queue
+typedef struct TCBNodeDPQ{
   TCB* tcb;
-  TCBNodeDPQ* next;
-  TCBNodeDPQ* prev;
+  struct TCBNodeDPQ* next;
+  struct TCBNodeDPQ* prev;
   uint32_t delay_ticks;
-};
+} TCBNodeDPQ;
 
 
 void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head, TCBNodeDPQ* active_head);
-TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength, TCB* tcb, uint32_t delay_ticks);
-TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t pqlength);
+TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength, TCB* tcb, uint32_t delay_ticks);
+TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength);
 TCBNodeDPQ* pq_getHead(TCBNodeDPQ* active_head);
+

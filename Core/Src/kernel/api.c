@@ -106,18 +106,34 @@ void ReadyQueue_pushTCB(TCB* tcb) {
 }
 
 
+// BLOCKED QUEUE using Linked List
+TCBNodeBLL BLL_tcb_pool[MAX_TASKS];
+TCBNodeBLL BLL_head; // sentinal node
+int BLL_length = 0;
+
+// TODO: Handle some errors fool 
+void BlockedQueue_remove(TCB* tcb) {
+    BLL_delete(&BLL_head, tcb, &BLL_length);
+}
+
+// TODO: Handle some errors fool 
+void BlockedQueue_insert(TCB* task) {
+    BLL_insert(&BLL_head, task, &BLL_length);
+}
+
+
 // ------------------------------------------
 // DELAY PRIORITY QUEUE
 TCBNodeDPQ pq_DELAY_pool[MAX_TASKS]; // priority queue pool for blocked tasks 
 TCBNodeDPQ pq_DELAY_active_head;  // sentinel for sorted active list
 TCBNodeDPQ pq_DELAY_free_head;    // sentinel for free list
-int pq_DELAY_length = 0;
+uint32_t pq_DELAY_length = 0;
 
 
 void taskDelay(uint32_t delay_ticks) {
     currTCB->state = TASK_BLOCKED;
     
-    pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, pq_DELAY_length,  currTCB, delay_ticks+HAL_GetTick());
+    pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length,  currTCB, delay_ticks+HAL_GetTick());
     rtos_request_context_switch();
 }
 
@@ -129,7 +145,7 @@ bool delayTaskReady() {
 }
 
 void activateDelayTask() {
-    TCBNodeDPQ* tcbnode = pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head, pq_DELAY_length);     
+    TCBNodeDPQ* tcbnode = pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length);     
     if (tcbnode == NULL) return; // no task in delay queue. 
 
     tcbnode->tcb->state = TASK_READY;
@@ -192,7 +208,14 @@ TCB* createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priori
 
     // TODO: insert into the block queue if the state is blocked. 
     // Finally, insert this into our ready tasks queue based on priority.
-    enqueue(&ready_queues[priority], tcb);
+    switch (state) {
+        case TASK_READY:
+            ReadyQueue_pushTCB(tcb);
+        break;
+        case TASK_BLOCKED:
+            BLL_insert(&BLL_head, tcb, &BLL_length);
+        break;    
+    }
 
     return tcb;
 }
@@ -219,7 +242,8 @@ void initIdleTCB() {
 void kernel_init() {
     InitializePool();
     initReadyQueue(ready_queuesDB, ready_queues);
-    initIdleTCB();
-
     init_pq(pq_DELAY_pool, pq_DELAY_length, &pq_DELAY_free_head, &pq_DELAY_active_head);
+    BLL_init(BLL_tcb_pool, MAX_TASKS, &BLL_head);
+
+    initIdleTCB();
 }
