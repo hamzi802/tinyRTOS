@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "queue.h"
-#include "stm32f4xx_hal.h"
 #include "assert.h"
+#include "main.h"
+#include "stdio.h"
+#include "stm32f4xx_hal.h"
 
 
 
@@ -102,6 +104,7 @@ TCB* ReadyQueue_getNextTCB() {
 
 
 void ReadyQueue_pushTCB(TCB* tcb) {
+    if (tcb == &idleTCB) return;
     enqueue(&ready_queues[tcb->priority], tcb);
 }
 
@@ -130,10 +133,14 @@ TCBNodeDPQ pq_DELAY_free_head;    // sentinel for free list
 uint32_t pq_DELAY_length = 0;
 
 
-void taskDelay(uint32_t delay_ticks) {
+void rtosTaskDelay(uint32_t delay_ticks) {
     currTCB->state = TASK_BLOCKED;
     
-    pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length,  currTCB, delay_ticks+HAL_GetTick());
+    __disable_irq();
+    uint32_t wake_up = HAL_GetTick() + delay_ticks;
+    pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length,  currTCB, wake_up);
+    __enable_irq();
+
     rtos_request_context_switch();
 }
 
@@ -142,14 +149,15 @@ bool delayTaskReady() {
     if ( pqDelayHead != NULL && pqDelayHead->delay_ticks == HAL_GetTick()) {
         return true;
     }
+    return false;
 }
 
 void activateDelayTask() {
-    TCBNodeDPQ* tcbnode = pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length);     
-    if (tcbnode == NULL) return; // no task in delay queue. 
+    TCB* tcb= pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length);     
+    if (tcb == NULL) return; // no task in delay queue. 
 
-    tcbnode->tcb->state = TASK_READY;
-    ReadyQueue_pushTCB(tcbnode->tcb);
+    tcb->state = TASK_READY;
+    ReadyQueue_pushTCB(tcb);
 }
 
 
@@ -217,11 +225,15 @@ TCB* createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priori
         break;    
     }
 
+    printf("Created task named: %s\n", task_name);
+
     return tcb;
 }
 
 void idleTaskRoutine() {
-    while(1);
+    while(1) {
+        printf("Running idle task\n");
+    };
 }
 
 void initIdleTCB() {
@@ -246,4 +258,9 @@ void kernel_init() {
     BLL_init(BLL_tcb_pool, MAX_TASKS, &BLL_head);
 
     initIdleTCB();
+
+    printf("Kernel init done\n");
+    printf("idleTCB.sp        = %p\n", idleTCB.sp);
+    printf("idleTaskRoutine   = %p\n", idleTaskRoutine);
+    printf("PC slot value     = 0x%08X\n", *(idleTCB.sp + 14));
 }

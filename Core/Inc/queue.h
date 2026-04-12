@@ -1,4 +1,7 @@
 #pragma once
+#include "kernel.h"
+#include "stdbool.h"
+#include "stdint.h"
 
 // expects a queue like
 typedef struct {
@@ -34,6 +37,6 @@ typedef struct TCBNodeDPQ{
 
 void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head, TCBNodeDPQ* active_head);
 TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength, TCB* tcb, uint32_t delay_ticks);
-TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength);
+TCB* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength);
 TCBNodeDPQ* pq_getHead(TCBNodeDPQ* active_head);
 

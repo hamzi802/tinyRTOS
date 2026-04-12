@@ -1,8 +1,8 @@
 #include "kernel.h"
-#include "stm32f401xc.h"
-#include "stm32f4xx_hal_cortex.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include "main.h"
 
 
 TCB* prevTCB = NULL;
@@ -61,8 +61,8 @@ void start_scheduler() {
 
     // We do EXC_RETURN now. The CPU kind of abandons this fucntion after we return by simulating this as exception return.
     __asm volatile(
-        "MOV LR, #0xFFFFFFFD"  // Return to Thread mode using PSP
-        "BX LR"
+        "MOV LR, #0xFFFFFFFD\n"  // Return to Thread mode using PSP
+        "BX LR\n"
     );
 }
 
@@ -72,18 +72,20 @@ __attribute__((naked))  void context_switch() {
     __asm volatile(
         // Save current context
         "MRS R0, PSP\n"          // R0 = PSP
-        "STMDB R0!, {R4-R11}"    // store R4-R11 in PSP
+        "STMDB R0!, {R4-R11}\n"    // store R4-R11 in PSP
         "LDR R1, =prevTCB\n"     // R0 = address of prevTCB sp variable (prevTCB = prevTCB->sp)
-        "STR R0, [R1]"           // save PSP into current task's SP given by [prevTCB->sp variable]
+        "LDR R1, [R1]\n"        // R1 = prevTCB  (the TCB*)
+        "STR R0, [R1]\n"           // save PSP into current task's SP given by [prevTCB->sp variable]
         
         // Switch PSP
         "LDR R0, =currTCB\n"     // R0 = address of newTaskSP variable
         "LDR R0, [R0]\n"         // value of newTaskSP variable 
+        "LDR R0, [R0]\n"        // R0 = currTCB  (the TCB*)
         "MSR PSP, R0\n"          // load the next Task SP into PSP: PSP = R0
         
         // restore context
         "LDMIA R0!, {R4-R11}\n"  // RePop the values into registers saved in the last context switch.
-        "MSR PSP, R0"            // After poping from the PSP, we have to update the PSP as well.
+        "MSR PSP, R0\n"            // After poping from the PSP, we have to update the PSP as well.
         
         // Return
         "BX LR\n"

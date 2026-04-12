@@ -1,0 +1,12 @@
+using sysbus
+mach create "stm32"
+
+machine LoadPlatformDescription @platforms/cpus/stm32f4.repl
+
+sysbus LoadELF @build/Debug/tinyRTOS.elf
+
+# Attach UART to terminal
+showAnalyzer sysbus.usart1
+
+# Start execution
+start

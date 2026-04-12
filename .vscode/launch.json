@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "STM32 Debug",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "openOCDLaunchCommands": [
+                "add_script_search_dir C:/msys64/mingw64/share/openocd/scripts"
+            ],
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32f4x.cfg"
+            ],
+            "executable": "${workspaceFolder}/build/Debug/tinyRTOS.elf",
+            "runToEntryPoint": "main",
+            "swoConfig": {
+                "enabled": false
+            },
+            "postStartSessionCommands": [
+                "monitor arm semihosting enable"
+            ]
+        }
+    ]
+}

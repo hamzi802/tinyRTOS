@@ -1,16 +1,13 @@
 #pragma once
 
-#include "kernel.h"
 #include <stdint.h>
 #include <sys/cdefs.h>
+#include <stdbool.h>
 
-#define STACK_SIZE 4096 // 128 words or 4096 bytes
-#define MAX_TASKS 16
+#define STACK_SIZE 2048 // 128 words or 4096 bytes
+#define MAX_TASKS 8
 #define MAX_PRIORITIES 3
 
-
-extern TCB* prevTCB;
-extern TCB* currTCB;
 
 typedef enum{
     PRIORITY_HIGH,
@@ -38,6 +35,10 @@ typedef struct {
     TaskStack taskStack;
 } TCB;
 
+
+extern TCB* prevTCB;
+extern TCB* currTCB;
+
 typedef struct TCBPoolObj {
     TCB tcb;
     struct TCBPoolObj* next;
@@ -63,6 +64,7 @@ void BlockedQueue_remove(TCB* tcb);
 void BlockedQueue_insert(TCB* task);
 
 // TIME DELAY QUEUE
+void rtosTaskDelay(uint32_t delay_ticks);
 bool delayTaskReady();
 void activateDelayTask();
 
@@ -70,4 +72,5 @@ void activateDelayTask();
 void tiny_scheduler();
 void start_scheduler();
 void context_switch();
+bool rtos_wake_task_from_isr(TCB* task);
 void rtos_request_context_switch(void);

@@ -3,8 +3,8 @@
 #include "stdint.h"
 #include "kernel.h"
 #include "string.h"
-#include "stm32f401xc.h"
 #include <stdint.h>
+#include "main.h"
 
 // Our QUEUE Convention
 // Tail -> write
@@ -77,6 +77,7 @@ void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head,
   active_head->prev = NULL;
 
   // chain all nodes in free pool
+  free_head->prev = NULL;
   free_head->next = &node_pool[0];
   node_pool[0].prev = free_head;
 
@@ -101,7 +102,7 @@ TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *
 
   // find insertion point based in the active list based on the priority i.e is the delay_ticks
   TCBNodeDPQ* curr = active_head;
-  while (curr->next != NULL && curr->next->delay_ticks >= delay_ticks){
+  while (curr->next != NULL && curr->next->delay_ticks <= delay_ticks){
     curr = curr->next;
   }  
 
@@ -117,9 +118,10 @@ TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *
 }
 
 // active -> A -> B
-TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength) {
+TCB* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength) {
     TCBNodeDPQ* node = active_head->next;
     if (node == NULL) return NULL;
+    TCB* tcb = node->tcb;
 
     // detech from active list
     active_head->next = node->next;
@@ -134,10 +136,10 @@ TCBNodeDPQ* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t 
 
     (*pqlength)--;
 
-    return node; // caller reads node->tcb before it gets reused
+    return tcb; // caller reads node->tcb before it gets reused
 }
 
-TCBNodeDPQ* getHead(TCBNodeDPQ* active_head) {
+TCBNodeDPQ* pq_getHead(TCBNodeDPQ* active_head) {
     return active_head->next;
 }
 

@@ -11,5 +11,7 @@
         "starm-clangd",
         "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gcc*",
         "--query-driver=${env:CUBE_BUNDLE_PATH}/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-g++*"
-    ]
+    ],
+    "cortex-debug.armToolchainPath": "C:\\ST\\STM32CubeIDE_2.0.0\\STM32CubeIDE\\plugins\\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.13.3.rel1.win32_1.0.100.202509120712\\tools\\bin",
+    "cortex-debug.openocdPath": "C:/msys64/mingw64/bin/openocd.exe"
 }
