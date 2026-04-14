@@ -4,10 +4,15 @@
 #include <sys/cdefs.h>
 #include <stdbool.h>
 
-#define STACK_SIZE 2048 // 128 words or 4096 bytes
+#define STACK_SIZE 4096 // 128 words or 4096 bytes
 #define MAX_TASKS 8
 #define MAX_PRIORITIES 3
 
+// for debugging
+extern volatile uint32_t debug_switches;
+extern volatile uint32_t debug_pendsv_fired;
+extern volatile char* debug_last_prev;
+extern volatile char* debug_last_curr;
 
 typedef enum{
     PRIORITY_HIGH,

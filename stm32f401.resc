@@ -9,4 +9,5 @@ sysbus LoadELF @build/Debug/tinyRTOS.elf
 showAnalyzer sysbus.usart1
 
 # Start execution
+machine StartGdbServer 3333
 start

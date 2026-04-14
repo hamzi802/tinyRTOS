@@ -60,6 +60,7 @@ TCB* dequeue(queue* q) {
     return tcb;
 }
 
+// TODO: REMOVE NOT BEING USED
 // returns NULL if queue is empty
 TCB* getHead(queue* q) {
     return q->tasks[q->head];
@@ -68,9 +69,9 @@ TCB* getHead(queue* q) {
 // ----------------------------------------
 // PRIORITY QUEUE FOR BLOCK TASKS: PRIORITY IS DELAY TICKS
 
-void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head,
+void init_pq(TCBNodeDPQ* node_pool, uint32_t node_pool_size, TCBNodeDPQ* free_head,
              TCBNodeDPQ* active_head) {
-  memset(node_pool, 0, sizeof(TCBNodeDPQ) * length);
+  memset(node_pool, 0, sizeof(TCBNodeDPQ) * node_pool_size);
 
   // active list starts empty
   active_head->next = NULL;
@@ -81,11 +82,11 @@ void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head,
   free_head->next = &node_pool[0];
   node_pool[0].prev = free_head;
 
-  for (int i = 0; i < length - 1; i++) {
+  for (int i = 0; i < node_pool_size - 1; i++) {
     node_pool[i].next = &node_pool[i + 1];
     node_pool[i + 1].prev = &node_pool[i];
   }
-  node_pool[length - 1].next = NULL;
+  node_pool[node_pool_size - 1].next = NULL;
 }
 
 TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength, TCB* tcb, uint32_t delay_ticks) {

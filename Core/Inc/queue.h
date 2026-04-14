@@ -35,7 +35,7 @@ typedef struct TCBNodeDPQ{
 } TCBNodeDPQ;
 
 
-void init_pq(TCBNodeDPQ* node_pool, int length, TCBNodeDPQ* free_head, TCBNodeDPQ* active_head);
+void init_pq(TCBNodeDPQ* node_pool, uint32_t node_pool_size, TCBNodeDPQ* free_head, TCBNodeDPQ* active_head);
 TCBNodeDPQ* pq_insert(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength, TCB* tcb, uint32_t delay_ticks);
 TCB* pq_dequeue(TCBNodeDPQ* active_head, TCBNodeDPQ* free_head, uint32_t *pqlength);
 TCBNodeDPQ* pq_getHead(TCBNodeDPQ* active_head);

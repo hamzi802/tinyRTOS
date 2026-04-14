@@ -104,7 +104,11 @@ TCB* ReadyQueue_getNextTCB() {
 
 
 void ReadyQueue_pushTCB(TCB* tcb) {
-    if (tcb == &idleTCB) return;
+    if (tcb == &idleTCB) {
+        return;
+    }
+    printf("tcb=%p name_ptr=%p priority=%d\n", 
+           tcb, tcb->task_name, tcb->priority);
     enqueue(&ready_queues[tcb->priority], tcb);
 }
 
@@ -134,29 +138,45 @@ uint32_t pq_DELAY_length = 0;
 
 
 void rtosTaskDelay(uint32_t delay_ticks) {
-    currTCB->state = TASK_BLOCKED;
+    currTCB->state = TASK_TIME_DELAY;
+    // uint32_t psp_before;
+    // __asm volatile("MRS %0, PSP" : "=r"(psp_before));
+    // printf("PSP before insert: 0x%08lX\n", psp_before);
     
     __disable_irq();
     uint32_t wake_up = HAL_GetTick() + delay_ticks;
     pq_insert(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length,  currTCB, wake_up);
     __enable_irq();
 
+    // uint32_t psp_after;
+    // __asm volatile("MRS %0, PSP" : "=r"(psp_after));
+    // printf("PSP after insert:  0x%08lX\n", psp_after);
+
     rtos_request_context_switch();
 }
 
 bool delayTaskReady() {
     TCBNodeDPQ* pqDelayHead = pq_getHead(&pq_DELAY_active_head);
-    if ( pqDelayHead != NULL && pqDelayHead->delay_ticks == HAL_GetTick()) {
+
+    if ( pqDelayHead != NULL && pqDelayHead->delay_ticks <= HAL_GetTick()) {
+        // printf("DELAY TASK READY\n");
         return true;
     }
     return false;
 }
 
 void activateDelayTask() {
+    // printf("pq_length before=%lu\n", pq_DELAY_length);
     TCB* tcb= pq_dequeue(&pq_DELAY_active_head, &pq_DELAY_free_head, &pq_DELAY_length);     
-    if (tcb == NULL) return; // no task in delay queue. 
+    // printf("pq_length after=%lu\n", pq_DELAY_length);
+    if (tcb == NULL) { // no task in delay queue. 
+        // printf("NO TASK IN DELAY QUEUE\n");
+        return;
+    } 
 
+    // printf("TASK become ready from being delay: %s\n", tcb->task_name);
     tcb->state = TASK_READY;
+    // printf("restoring: %s sp=0x%08lX\n", tcb->task_name, (uint32_t)tcb->sp);
     ReadyQueue_pushTCB(tcb);
 }
 
@@ -254,7 +274,7 @@ void initIdleTCB() {
 void kernel_init() {
     InitializePool();
     initReadyQueue(ready_queuesDB, ready_queues);
-    init_pq(pq_DELAY_pool, pq_DELAY_length, &pq_DELAY_free_head, &pq_DELAY_active_head);
+    init_pq(pq_DELAY_pool, MAX_TASKS, &pq_DELAY_free_head, &pq_DELAY_active_head);
     BLL_init(BLL_tcb_pool, MAX_TASKS, &BLL_head);
 
     initIdleTCB();

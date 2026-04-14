@@ -10,7 +10,10 @@ TCB* currTCB = NULL;
 
 // uint32_T time_slice = 0;
 
-
+volatile uint32_t debug_switches = 0;
+volatile uint32_t debug_pendsv_fired = 0;
+volatile char* debug_last_prev = NULL;
+volatile char* debug_last_curr = NULL;
 
 
 // Assumed: currTCB not NULL
@@ -33,7 +36,7 @@ void tiny_scheduler() {
 
     // if a task delay is now ready, put it in the ready queue after popping it from the 
     // blocked due to time delay queue. 
-    if (delayTaskReady()) {
+    while (delayTaskReady()) {
         activateDelayTask(); // delay queue -> ready queue
     }
 
@@ -126,12 +129,19 @@ void rtos_request_context_switch(void) {
     // we keep running this task until this task gets removed from ready state.
     if (currTCB == prevTCB) { 
         prevTCB = temp;
+        // SCB->ICSR |= SCB_ICSR_PENDSVCLR_Msk;  // CLAUDE
         return;
     }
 
+    // CLAUDE
+    // if (prevTCB == NULL) {
+    //     prevTCB = currTCB;
+    //     return;
+    // }
+
     // check which queue should the prev TCB go 
     if (prevTCB != NULL) { // which it would never be
-        switch (currTCB->state) {
+        switch (prevTCB->state) {
             case TASK_READY: 
                 ReadyQueue_pushTCB(prevTCB);
                 break;
@@ -145,8 +155,11 @@ void rtos_request_context_switch(void) {
             break;
         }
     } 
-
+    debug_last_prev = prevTCB->task_name;
+    debug_last_curr = currTCB->task_name;
+    debug_switches++;
     // Trigger Context Switch: Pend the PendSV handler
-    SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk; // Set PendSV to pending
+    if (!(SCB->ICSR & SCB_ICSR_PENDSVSET_Msk)) {
+        SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;
+    }
 }
-

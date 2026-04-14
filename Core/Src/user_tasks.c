@@ -7,7 +7,9 @@
 // MEDIUM priority
 void task1(void) {
     while(1){
-        printf("Running task1\n");
+        printf("task1 running. switches=%lu pendsv=%lu last=%s->%s\n",
+               debug_switches, debug_pendsv_fired,
+               debug_last_prev, debug_last_curr);
         // HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
         rtosTaskDelay(200);
     }
