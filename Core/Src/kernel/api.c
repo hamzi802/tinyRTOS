@@ -107,8 +107,6 @@ void ReadyQueue_pushTCB(TCB* tcb) {
     if (tcb == &idleTCB) {
         return;
     }
-    printf("tcb=%p name_ptr=%p priority=%d\n", 
-           tcb, tcb->task_name, tcb->priority);
     enqueue(&ready_queues[tcb->priority], tcb);
 }
 
@@ -223,15 +221,36 @@ TCB* createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priori
     // task.sp is uint32_t* so compiler know, the address pointed to is 4 bytes word  
     tcb->sp = tcb->sp - 16;
 
+    // TODO: IS THIS SAFE???
+    *(tcb->sp + 13) = 0xFFFFFFFD; // setting LR to valid value instead of 0x00000000 which causes fault
+
     // set the PC to address of the routine of the task we want to run
     // In the stack, from top, the 15th register is PC so 
 
-    *(tcb->sp + 14) = (uint32_t) task_routine;    // tcb->sp[14] = (uint32_t) task_routine;
+    *(tcb->sp + 14) = ((uint32_t) task_routine) | 1;    // tcb->sp[14] = (uint32_t) task_routine;
 
     // set the xPSR (the 16th register) to 0x01000000
     // 0x01000000 basically sets the Thumb Mode xPSR bit to 1 so that 
     // CPU uses the Thumb mode.
     *(tcb->sp + 15) = 0x01000000;
+
+    // BY GPT
+    // ---- Optional but GOOD ----
+    tcb->sp[12] = 0xCCCCCCCC; // R12
+    tcb->sp[11] = 0x33333333; // R3
+    tcb->sp[10] = 0x22222222; // R2
+    tcb->sp[9]  = 0x11111111; // R1
+    tcb->sp[8]  = 0x00000000; // R0
+
+    // ---- Software saved (R4-R11) ----
+    tcb->sp[0] = 0;
+    tcb->sp[1] = 0;
+    tcb->sp[2] = 0;
+    tcb->sp[3] = 0;
+    tcb->sp[4] = 0;
+    tcb->sp[5] = 0;
+    tcb->sp[6] = 0;
+    tcb->sp[7] = 0;
 
 
     // TODO: insert into the block queue if the state is blocked. 
@@ -245,14 +264,15 @@ TCB* createTask(char* task_name, TaskRoutine_t task_routine, TaskPriority priori
         break;    
     }
 
-    printf("Created task named: %s\n", task_name);
+    // printf("Created task named: %s\n", task_name);
 
     return tcb;
 }
 
 void idleTaskRoutine() {
+    // printf("Running idle task\n");
     while(1) {
-        printf("Running idle task\n");
+        __WFI();  // no printf, no stack usage
     };
 }
 
@@ -264,7 +284,8 @@ void initIdleTCB() {
 
     idleTCB.sp = (uint32_t*) (idleTCB.taskStack.data + STACK_SIZE);  
     idleTCB.sp = idleTCB.sp - 16;
-    *(idleTCB.sp + 14) = (uint32_t) idleTaskRoutine;
+    *(idleTCB.sp + 13) = 0xFFFFFFFD;  // ← ADD THIS LINE
+    *(idleTCB.sp + 14) = ((uint32_t) idleTaskRoutine) | 1;
     *(idleTCB.sp + 15) = 0x01000000;
 }
 
@@ -279,8 +300,8 @@ void kernel_init() {
 
     initIdleTCB();
 
-    printf("Kernel init done\n");
-    printf("idleTCB.sp        = %p\n", idleTCB.sp);
-    printf("idleTaskRoutine   = %p\n", idleTaskRoutine);
-    printf("PC slot value     = 0x%08X\n", *(idleTCB.sp + 14));
+    // printf("Kernel init done\n");
+    // printf("idleTCB.sp        = %p\n", idleTCB.sp);
+    // printf("idleTaskRoutine   = %p\n", idleTaskRoutine);
+    // printf("PC slot value     = 0x%08X\n", *(idleTCB.sp + 14));
 }

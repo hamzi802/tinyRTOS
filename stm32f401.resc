@@ -7,7 +7,7 @@ sysbus LoadELF @build/Debug/tinyRTOS.elf
 
 # Attach UART to terminal
 showAnalyzer sysbus.usart1
-
+cpu PC 0x08002241
+cpu SP 0x20010000
 # Start execution
 machine StartGdbServer 3333
-start

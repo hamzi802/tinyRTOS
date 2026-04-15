@@ -27,6 +27,19 @@ volatile char* debug_last_curr = NULL;
 
 void tiny_scheduler() {
 
+    // Slice ocunter
+    static uint32_t slice = 0;
+    
+    while (delayTaskReady()) {
+        activateDelayTask();
+        rtos_request_context_switch();
+        return;
+    }
+
+    slice++;
+    if (slice < 10) return;  // give task 10ms of CPU time
+    slice = 0;
+
     // Here, we expect currTCB to have been set up by the start scdeduler function. 
     // TODO: There can be case like, where we don't do context switch if there are no more tasks.
     // FOR SUCH a condiiton, we need to implement a idle task. (inpirtaion: freeRTOS)
@@ -54,46 +67,41 @@ void tiny_scheduler() {
 void start_scheduler() {
     currTCB = ReadyQueue_popTCB();
 
-    // We're moving up the stack so that sp points to R0 in our stack frame.
-    // This is because, we simulate a exception return in this routine, which causes the CPU 
-    // to pop registers R0-R3, R12, LC, xPSR from our stack.
-    currTCB->sp += 8;   
-    __set_PSP((uint32_t) currTCB->sp);
-    __set_CONTROL(0x02);  // This means: nPRIV = 0, SPSEL = 1, FPCA = 0 : in CONTROL, only 3 LSB are used.
-    __ISB();  // makes sure control register is fully applied 
-
+    __asm volatile("SVC #0\n");
     // We do EXC_RETURN now. The CPU kind of abandons this fucntion after we return by simulating this as exception return.
-    __asm volatile(
-        "MOV LR, #0xFFFFFFFD\n"  // Return to Thread mode using PSP
-        "BX LR\n"
-    );
+    // __asm volatile(
+    //     "MOV LR, #0xFFFFFFFD\n"  // Return to Thread mode using PSP
+    //     "BX LR\n"
+    // );
 }
 
 
 
-__attribute__((naked))  void context_switch() {
-    __asm volatile(
-        // Save current context
-        "MRS R0, PSP\n"          // R0 = PSP
-        "STMDB R0!, {R4-R11}\n"    // store R4-R11 in PSP
-        "LDR R1, =prevTCB\n"     // R0 = address of prevTCB sp variable (prevTCB = prevTCB->sp)
-        "LDR R1, [R1]\n"        // R1 = prevTCB  (the TCB*)
-        "STR R0, [R1]\n"           // save PSP into current task's SP given by [prevTCB->sp variable]
+// __attribute__((naked))  void context_switch() {
+//     __asm volatile(
+//         // Save current context
+//         "CPSID I\n" // disable intrrupts
+//         "MRS R0, PSP\n"          // R0 = PSP
+//         "STMDB R0!, {R4-R11}\n"    // store R4-R11 in PSP
+//         "LDR R1, =prevTCB\n"     // R0 = address of prevTCB sp variable (prevTCB = prevTCB->sp)
+//         "LDR R1, [R1]\n"        // R1 = prevTCB  (the TCB*)
+//         "STR R0, [R1]\n"           // save PSP into current task's SP given by [prevTCB->sp variable]
         
-        // Switch PSP
-        "LDR R0, =currTCB\n"     // R0 = address of newTaskSP variable
-        "LDR R0, [R0]\n"         // value of newTaskSP variable 
-        "LDR R0, [R0]\n"        // R0 = currTCB  (the TCB*)
-        "MSR PSP, R0\n"          // load the next Task SP into PSP: PSP = R0
+//         // Switch PSP
+//         "LDR R1, =currTCB\n"     // R0 = address of newTaskSP variable
+//         "LDR R1, [R1]\n"         // value of newTaskSP variable 
+//         "LDR R0, [R1]\n"        // R0 = currTCB  (the TCB*)
+//         // "MSR PSP, R0\n"          // load the next Task SP into PSP: PSP = R0
         
-        // restore context
-        "LDMIA R0!, {R4-R11}\n"  // RePop the values into registers saved in the last context switch.
-        "MSR PSP, R0\n"            // After poping from the PSP, we have to update the PSP as well.
-        
-        // Return
-        "BX LR\n"
-    );
-}
+//         // restore context
+//         "LDMIA R0!, {R4-R11}\n"  // RePop the values into registers saved in the last context switch.
+//         "MSR PSP, R0\n"            // After poping from the PSP, we have to update the PSP as well.
+
+//         "CPSIE I\n" // enable intrrupts -- no need they are done automatically
+//         // Return
+//         "BX LR\n"
+//     );
+// }
 
 
 bool rtos_wake_task_from_isr(TCB* task) {
@@ -140,7 +148,7 @@ void rtos_request_context_switch(void) {
     // }
 
     // check which queue should the prev TCB go 
-    if (prevTCB != NULL) { // which it would never be
+    if (prevTCB != NULL) { 
         switch (prevTCB->state) {
             case TASK_READY: 
                 ReadyQueue_pushTCB(prevTCB);

@@ -6,11 +6,9 @@
 
 // MEDIUM priority
 void task1(void) {
+    // printf("Running task 1");
     while(1){
-        printf("task1 running. switches=%lu pendsv=%lu last=%s->%s\n",
-               debug_switches, debug_pendsv_fired,
-               debug_last_prev, debug_last_curr);
-        // HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
         rtosTaskDelay(200);
     }
 }
@@ -18,9 +16,9 @@ void task1(void) {
 
 // low priority
 void task2(void) {
+    // printf("Running task 2\n");
     while(1){
-        printf("Running task2\n");
-        // HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         rtosTaskDelay(10);
     }
 }
@@ -28,9 +26,9 @@ void task2(void) {
 
 // HIGHEST priority
 void task3(void) {
+    // printf("Running task3\n");
     while(1) {
-        printf("Running task3\n");
-        // HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
+        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
         rtosTaskDelay(150);
     }
 }

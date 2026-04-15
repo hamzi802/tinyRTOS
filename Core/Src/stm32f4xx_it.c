@@ -145,8 +145,26 @@ void UsageFault_Handler(void)
   */
 void SVC_Handler(void)
 {
+
   /* USER CODE BEGIN SVCall_IRQn 0 */
 
+    // We're moving up the stack so that sp points to R0 in our stack frame.
+    // This is because, we simulate a exception return in this routine, which causes the CPU 
+    // to pop registers R0-R3, R12, LC, xPSR from our stack.
+    uint32_t *psp = currTCB->sp + 8;   
+
+    __set_PSP((uint32_t) psp);
+    __set_CONTROL(0x02);  // This means: nPRIV = 0, SPSEL = 1, FPCA = 0 : in CONTROL, only 3 LSB are used.
+    __DSB();
+    __ISB();  // makes sure control register is fully applied 
+
+    // Trigger SVC to enter handler mode, then we do EXC_RETURN from there. EXC_RETRUN simulates an exception return
+    // there, we must be in handler mode to do that, therefore we go to SVC.
+
+  __asm volatile(
+      "MOV LR, #0xFFFFFFFD\n"
+      "BX LR\n"
+  );
   /* USER CODE END SVCall_IRQn 0 */
   /* USER CODE BEGIN SVCall_IRQn 1 */
 
@@ -169,12 +187,35 @@ void DebugMon_Handler(void)
 /**
   * @brief This function handles Pendable request for system service.
   */
-void PendSV_Handler(void)
+__attribute__((naked)) void PendSV_Handler(void)
 {
   /* USER CODE BEGIN PendSV_IRQn 0 */
-  context_switch();
+  // context_switch();
   /* USER CODE END PendSV_IRQn 0 */
   /* USER CODE BEGIN PendSV_IRQn 1 */
+    __asm volatile(
+        // Save current context
+        "CPSID I\n" // disable intrrupts
+        "MRS R0, PSP\n"          // R0 = PSP
+        "STMDB R0!, {R4-R11}\n"    // store R4-R11 in PSP
+        "LDR R1, =prevTCB\n"     // R0 = address of prevTCB sp variable (prevTCB = prevTCB->sp)
+        "LDR R1, [R1]\n"        // R1 = prevTCB  (the TCB*)
+        "STR R0, [R1]\n"           // save PSP into current task's SP given by [prevTCB->sp variable]
+        
+        // Switch PSP
+        "LDR R1, =currTCB\n"     // R0 = address of newTaskSP variable
+        "LDR R1, [R1]\n"         // value of newTaskSP variable 
+        "LDR R0, [R1]\n"        // R0 = currTCB  (the TCB*)
+        // "MSR PSP, R0\n"          // load the next Task SP into PSP: PSP = R0
+        
+        // restore context
+        "LDMIA R0!, {R4-R11}\n"  // RePop the values into registers saved in the last context switch.
+        "MSR PSP, R0\n"            // After poping from the PSP, we have to update the PSP as well.
+
+        "CPSIE I\n" // enable intrrupts -- no need they are done automatically
+        // Return
+        "BX LR\n"
+    );
 
   /* USER CODE END PendSV_IRQn 1 */
 }

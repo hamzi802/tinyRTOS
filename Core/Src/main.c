@@ -45,8 +45,8 @@
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
-// TCB* taskHandler3;
-// static uint32_t last_press_tick = 0;
+TCB* taskHandler3;
+static uint32_t last_press_tick = 0;
 
 /* USER CODE END PV */
 
@@ -83,7 +83,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  printf("Finally done with hal init\n");
+  // printf("Finally done with hal init\n");
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -107,8 +107,8 @@ int main(void)
   // After creating the tasks, must run scheduler_start(). 
 
   createTask("medium priority", task1, PRIORITY_MEDIUM, TASK_READY);
-  // createTask("low priority", task2, PRIORITY_LOW, TASK_READY);
-  // createTask("high priority", task3, PRIORITY_HIGH, TASK_BLOCKED);
+  createTask("low priority", task2, PRIORITY_LOW, TASK_READY);
+  taskHandler3 = createTask("high priority", task3, PRIORITY_HIGH, TASK_BLOCKED);
 
   // Enable interrupt for pin 15 -- push button
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
@@ -244,22 +244,22 @@ static void MX_GPIO_Init(void)
 
 
 // Handling the interrupt at PA15
-// void EXTI15_10_IRQHandler(void) {
-//   HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);
-// }
+void EXTI15_10_IRQHandler(void) {
+  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_15);
+}
 
-// void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-//   if (GPIO_Pin == GPIO_PIN_15) {
-//     uint32_t now = HAL_GetTick();
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+  if (GPIO_Pin == GPIO_PIN_15) {
+    uint32_t now = HAL_GetTick();
 
-//     if ((now - last_press_tick) < 50) return; // Reject bounce
-//     last_press_tick = now;
+    if ((now - last_press_tick) < 50) return; // Reject bounce
+    last_press_tick = now;
     
-//     if (rtos_wake_task_from_isr(taskHandler3)) {
-//       rtos_request_context_switch();
-//     }
-//   }
-// }
+    if (rtos_wake_task_from_isr(taskHandler3)) {
+      rtos_request_context_switch();
+    }
+  }
+}
 
 /* USER CODE END 4 */
 

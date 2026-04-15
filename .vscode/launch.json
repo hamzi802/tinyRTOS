@@ -1,17 +1,29 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "Renode Debug",
-            "type": "cortex-debug",
-            "request": "launch",
-            "servertype": "external",
-            "gdbTarget": "localhost:3333",
-            "executable": "${workspaceFolder}/build/Debug/tinyRTOS.elf",
-            "device": "STM32F4",
-            "svdFile": "${workspaceFolder}/STM32F4.svd",
-            "runToEntryPoint": "main",
-            "showDevDebugOutput": "raw"
-        }
-    ]
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug STM32 (OpenOCD)",
+      "type": "cortex-debug",
+      "request": "launch",
+
+      "servertype": "openocd",
+
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/tinyRTOS.elf",
+
+      "configFiles": [
+        "interface/stlink.cfg",
+        "target/stm32f4x.cfg"
+      ],
+
+      "runToEntryPoint": "main",
+
+      "device": "STM32F401",
+      "interface": "swd",
+
+      "postRestartCommands": [
+        "monitor reset halt"
+      ]
+    }
+  ]
 }

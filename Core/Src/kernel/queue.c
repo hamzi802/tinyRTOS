@@ -55,6 +55,7 @@ TCB* dequeue(queue* q) {
     }
 
     TCB* tcb = q->tasks[q->head];
+    q->tasks[q->head] = NULL;             
     q->head = (q->head + 1) % q->size;
 
     return tcb;
