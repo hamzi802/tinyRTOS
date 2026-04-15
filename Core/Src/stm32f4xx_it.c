@@ -145,7 +145,6 @@ void UsageFault_Handler(void)
   */
 void SVC_Handler(void)
 {
-
   /* USER CODE BEGIN SVCall_IRQn 0 */
 
     // We're moving up the stack so that sp points to R0 in our stack frame.

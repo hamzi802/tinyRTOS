@@ -9,7 +9,7 @@ void task1(void) {
     // printf("Running task 1");
     while(1){
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-        rtosTaskDelay(200);
+        rtosTaskDelay(300);
     }
 }
 
@@ -19,7 +19,7 @@ void task2(void) {
     // printf("Running task 2\n");
     while(1){
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-        rtosTaskDelay(10);
+        rtosTaskDelay(600);
     }
 }
 
@@ -29,7 +29,7 @@ void task3(void) {
     // printf("Running task3\n");
     while(1) {
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_6);
-        rtosTaskDelay(150);
+        rtosTaskDelay(100);   // IMPORTANT
     }
 }
 

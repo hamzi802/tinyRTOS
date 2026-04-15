@@ -111,7 +111,8 @@ bool rtos_wake_task_from_isr(TCB* task) {
     BlockedQueue_remove(task);
     ReadyQueue_pushTCB(task);
 
-    if (task->priority > currTCB->priority) {
+    // < shows the task has higher priority
+    if (task->priority < currTCB->priority) {
         return true;
     }
 
