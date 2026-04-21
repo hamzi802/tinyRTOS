@@ -1,245 +1,135 @@
+# tinyRTOS — Interrupt-Driven Real-Time Operating System (ARM Cortex-M4)
 
+A lightweight, preemptive real-time operating system built from scratch for STM32F401 (ARM Cortex-M4), designed to explore low-level OS concepts including scheduling, context switching, and exception handling.
 
-# MINI RTOS
-
-1. First thing we need is to setup SysTick timer so that it triggers an interrupt every 1ms.
-By default, when we do HAL_Config, it sets up the interrupt to trigger every 1ms.
-So, no need to do that using the SysTick_Config(ticks) function from CMSIS.
-
-
-
-
-
-# TODO
-- implement waiting/block etc queues and update the rtoswakeffromblock function so that task is pushed into the blocked state or removed from one.
-- Add rtos delay function that makes the function in block state for the duratioin of the delay.  
-- Handle the schedluer so that it puts the tasks whole time delay has ended into the ready_queue.
-
-# NOTES
-You defined:
-
-```text
-TA->sp → [ R4–R11 ][ R0–xPSR ]
-```
-
-At **scheduler start**, you did:
-
-```c
-PSP = TA->sp + 8   // points to R0
-EXC_RETURN
-```
+This project focuses on understanding how an RTOS works internally rather than relying on existing frameworks like FreeRTOS.
 
 ---
 
-## 🔹 After EXC_RETURN
+## ⚙️ Features
 
-CPU pops:
-
-```text
-R0–R3, R12, LR, PC, xPSR
-```
-
-Now:
-
-```text
-PSP → top of stack (above xPSR)
-CPU registers = Task A state
-```
-
-👉 Important:
-
-```text
-TA->sp still points to OLD saved frame (stale now)
-```
+- Preemptive multitasking using SysTick timer
+- Interrupt-driven scheduler (PendSV-based context switching)
+- Fixed-priority, multi-queue round-robin scheduling
+- Task isolation using Process Stack Pointer (PSP)
+- Lightweight system call interface using SVC exceptions
+- Basic task delay/blocking support
 
 ---
 
-# 🔁 Context switch: TA → TB
+## 🧠 System Design Overview
 
-PendSV fires.
+tinyRTOS is built around ARM Cortex-M exception mechanisms:
 
----
+- **SysTick** → triggers periodic scheduling
+- **PendSV** → handles context switching
+- **SVC** → provides controlled transitions between user tasks and kernel logic
 
-# 🔥 Step 1: Hardware push (automatic)
-
-CPU pushes onto PSP:
-
-```text
-R0–R3, R12, LR, PC, xPSR
-```
-
-So stack becomes:
-
-```text
-[ R0–xPSR ]   ← freshly pushed
-```
-
-PSP moves DOWN by 8 words.
+The design cleanly separates:
+- Scheduling logic (policy)
+- Context switching (mechanism)
+- Task execution (user space)
 
 ---
 
-# 🔥 Step 2: Software push (your PendSV)
+## 🧩 Core Concepts Implemented
 
-You push:
+### 🧵 Task Model
+Each task is represented using a Task Control Block (TCB) containing:
+- Stack pointer (PSP)
+- Task state (Ready / Blocked / Delayed)
+- Priority level
 
-```text
-R4–R11
-```
+### ⏱ Scheduler
+- Fixed-priority scheduling
+- Round-robin within same priority level
+- Ready, blocked, and delay queues
 
-Now stack becomes:
+### 🔄 Context Switching
+- Triggered via PendSV exception
+- Full CPU state saved/restored during switch
+- Uses PSP for task isolation
 
-```text
-[ R4–R11 ][ R0–xPSR ]
-↑
-PSP
-```
-
----
-
-# 💥 Step 3: Save SP into TCB
-
-```c
-TA->sp = PSP;
-```
-
-So now:
-
-```text
-TA->sp → [ R4–R11 ][ R0–xPSR ]   ✔ rebuilt correctly
-```
+### 🧷 System Calls (SVC)
+- Controlled kernel entry point
+- Used for task delay and scheduler interaction
 
 ---
 
-# 🔁 Step 4: Switch to Task B
+## 🧪 Debugging & Challenges
 
-```c
-PSP = TB->sp;
-```
+This project involved significantly more debugging than implementation.
 
-But remember:
+### Key Issue: PendSV Stack Corruption
 
-```text
-TB->sp → R4 (start of full frame)
-```
+A critical bug caused random system crashes during context switching.
 
----
+#### Root Cause:
+PendSV handler was corrupting stack state due to incorrect assumptions about ARM exception entry behavior and compiler optimizations.
 
-# 🔥 Step 5: Restore TB (software)
+Specifically:
+- Compiler optimizations were altering expected register state handling
+- Stack frame assumptions during exception entry were incorrect
+- Missing `volatile` semantics allowed unintended register handling behavior
 
-Pop:
+#### Fix:
+- Corrected exception entry/exit assumptions
+- Introduced `volatile` where required to prevent compiler interference
+- Revalidated stack frame layout during context switching
 
-```text
-R4–R11
-```
-
-Now:
-
-```text
-PSP → R0 of TB
-```
+This bug revealed deeper insights into:
+- ARM Cortex-M exception model
+- Compiler + hardware interaction
+- Real-world RTOS stability issues
 
 ---
 
-# 🔥 Step 6: EXC_RETURN
+## 🧠 Key Learnings
 
-CPU pops:
-
-```text
-R0–R3, R12, LR, PC, xPSR
-```
-
-Now:
-
-```text
-TB is running
-PSP → top of stack
-```
+- How ARM Cortex-M handles exceptions internally
+- Real implementation of context switching (beyond theory)
+- Trade-offs in RTOS scheduling design
+- Debugging low-level stack and register corruption issues
+- Importance of compiler behavior in embedded systems
 
 ---
 
-# 🧠 Final summary (this is the key)
+## 🛠️ Tech Stack
 
-## For Task A:
-
-```text
-Before switch:
-PSP → top (running)
-
-After save:
-TA->sp → [ R4–R11 ][ R0–xPSR ]
-```
+- C (bare-metal)
+- ARM Cortex-M4 (STM32F401)
+- CMSIS / startup-level programming
+- No RTOS or HAL dependencies for core logic
 
 ---
 
-## For Task B:
+## 📌 Why this project exists
 
-```text
-Before restore:
-TB->sp → [ R4–R11 ][ R0–xPSR ]
+Most RTOS usage hides internal complexity.
 
-After restore:
-PSP → top (running)
-```
+This project was built to understand:
+> “What actually happens when a task switches?”
 
----
-
-# 💡 The invariant (VERY IMPORTANT)
-
-Every task always satisfies:
-
-```text
-tcb->sp → [ R4–R11 ][ R0–xPSR ]
-```
+It is a ground-up exploration of scheduling, interrupts, and CPU state management on ARM microcontrollers.
 
 ---
 
-# 🚨 Answer to your concern
+## 🚀 Future Improvements
 
-> “Will pushing again mess things up?”
-
-❌ No
-
-Because:
-
-* EXC_RETURN **consumes** the frame
-* PendSV **recreates** the exact same frame
-
-👉 perfectly symmetric
+- Priority inversion handling (mutex + priority inheritance)
+- Memory allocator for dynamic tasks
+- Tickless idle mode
+- Basic IPC (message queues / semaphores)
 
 ---
 
-# 🔥 One-line intuition
+## 📷 Hardware
 
-> A running task has **no frame on stack**, a suspended task has **a full frame saved**.
-
----
-
-# 🧭 If something breaks in your code
-
-It will be in ONE of these:
-
-1. PSP not pointing exactly to R0 before EXC_RETURN
-2. R4–R11 push/pop order mismatch
-3. Wrong SP stored in TCB
+- STM32F401 (ARM Cortex-M4)
+- Bare-metal firmware development
 
 ---
 
-# 🚀 You now understand the full cycle
+## 📜 License
 
-This is literally the **core of every Cortex-M RTOS**.
-
----
-
-If you want, next step I can:
-
-* verify your PendSV handler line-by-line
-* or simulate one full switch using your actual memory values
-
-You’re basically at “RTOS works” stage now.
-
-
-# Calling start_scheduler frmo main function
-main runs in Thread mode with MSP. 
-If we return from the thread mode by running start_scheduler to simulate an exception return, 
-we get a hard fault. Because Exception only run in Handler mode thus we must return from the Handler 
-mode to simulate an exception return.  
+For educational purposes.
