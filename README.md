@@ -99,18 +99,6 @@ This bug revealed deeper insights into:
 - C (bare-metal)
 - ARM Cortex-M4 (STM32F401)
 - CMSIS / startup-level programming
-- No RTOS or HAL dependencies for core logic
-
----
-
-## 📌 Why this project exists
-
-Most RTOS usage hides internal complexity.
-
-This project was built to understand:
-> “What actually happens when a task switches?”
-
-It is a ground-up exploration of scheduling, interrupts, and CPU state management on ARM microcontrollers.
 
 ---
 
@@ -126,7 +114,6 @@ It is a ground-up exploration of scheduling, interrupts, and CPU state managemen
 ## 📷 Hardware
 
 - STM32F401 (ARM Cortex-M4)
-- Bare-metal firmware development
 
 ---
 
