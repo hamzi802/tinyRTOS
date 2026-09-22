@@ -6,6 +6,43 @@ This project focuses on understanding how an RTOS works internally rather than r
 
 ---
 
+## 📁 Project Layout
+
+- `Core/` - application, kernel, interrupt, and task sources
+- `Drivers/` - STM32 HAL and CMSIS dependencies
+- `cmake/` - ARM GCC toolchain and STM32CubeMX support
+- `monitor/` - desktop UART dashboards for firmware telemetry
+
+## 🧰 Requirements
+
+- STM32F401 board, such as a Black Pill
+- ARM GNU Toolchain (`arm-none-eabi-gcc`)
+- CMake 3.22 or newer and Ninja
+- ST-Link and OpenOCD for flashing/debugging
+- Python 3 with `pip` for the UART monitor
+
+## 🔨 Build and Debug
+
+Configure and build the Debug firmware from PowerShell:
+
+```powershell
+cmake --preset Debug
+cmake --build --preset Debug
+```
+
+The resulting firmware is `build/Debug/tinyRTOS.elf`. Open the project in VS Code
+with the Cortex-Debug and CMake Tools extensions installed, connect an ST-Link, and
+start **Debug STM32 (OpenOCD)** from the Run and Debug view.
+
+For an optimized build, use:
+
+```powershell
+cmake --preset Release
+cmake --build --preset Release
+```
+
+---
+
 ## ⚙️ Features
 
 - Preemptive multitasking using SysTick timer
@@ -122,11 +159,27 @@ uses PA9 as TX and PA10 as RX. A desktop dashboard is included in `monitor/`:
 
 ```powershell
 py -m pip install -r monitor/requirements.txt
-py monitor/uart_monitor.py
+py monitor/uart_monitor_qt.py
 ```
 
 Connect USB-to-TTL TX to PA10, RX to PA9, and GND to GND. Use a 3.3 V adapter;
 do not connect its 5 V pin to the board UART.
+
+The Qt dashboard automatically detects FTDI adapters, displays task health and
+scheduler activity, and sends task-delay commands. The lightweight Tkinter monitor
+is available as a fallback:
+
+```powershell
+py monitor/uart_monitor.py
+```
+
+Both monitors support demo data without hardware. In the fallback monitor, select
+**Demo Stream** to preview the dashboard. Valid task-delay commands use task names
+`task1`, `task2`, or `task3` and a delay from 1 to 60000 ms, for example:
+
+```text
+delay task1 2000
+```
 
 ---
 
