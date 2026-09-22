@@ -115,6 +115,19 @@ This bug revealed deeper insights into:
 
 - STM32F401 (ARM Cortex-M4)
 
+## UART monitor
+
+The firmware reports task heartbeats over USART1 at 115200 baud. The Black Pill
+uses PA9 as TX and PA10 as RX. A desktop dashboard is included in `monitor/`:
+
+```powershell
+py -m pip install -r monitor/requirements.txt
+py monitor/uart_monitor.py
+```
+
+Connect USB-to-TTL TX to PA10, RX to PA9, and GND to GND. Use a 3.3 V adapter;
+do not connect its 5 V pin to the board UART.
+
 ---
 
 ## 📜 License

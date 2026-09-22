@@ -124,13 +124,6 @@ void rtos_request_context_switch(void) {
     TCB* temp = prevTCB;
     prevTCB = currTCB;
 
-    // if the curr task is still ready after it requests context switch then push it into 
-    // the ready queue so that it still goes through the multi queue logic for selection 
-    // as it may again be popped even though it was the one that requested the context 
-    // switch.
-    if (currTCB->state == TASK_READY) ReadyQueue_pushTCB(currTCB);
-
-
     // We get a task from ready queue. if there's none, we get the IDLE task 
     currTCB = ReadyQueue_popTCB();
 
@@ -164,9 +157,10 @@ void rtos_request_context_switch(void) {
             break;
         }
     } 
-    debug_last_prev = prevTCB->task_name;
-    debug_last_curr = currTCB->task_name;
+    debug_last_prev = prevTCB != NULL ? prevTCB->task_name : "idle";
+    debug_last_curr = currTCB != NULL ? currTCB->task_name : "idle";
     debug_switches++;
+
     // Trigger Context Switch: Pend the PendSV handler
     if (!(SCB->ICSR & SCB_ICSR_PENDSVSET_Msk)) {
         SCB->ICSR |= SCB_ICSR_PENDSVSET_Msk;

@@ -25,6 +25,7 @@
 #include "stm32f4xx_hal_gpio.h"
 #include "user_tasks.h"
 #include <stdio.h>
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,6 +49,8 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 TCB* taskHandler3;
 static uint32_t last_press_tick = 0;
+static uint8_t uart_rx_byte = 0;
+static uint8_t uart_cmd_index = 0;
 
 /* USER CODE END PV */
 
@@ -97,6 +100,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART1_UART_Init();
+  memset(uart_cmd_buffer, 0, sizeof(uart_cmd_buffer));
+  HAL_UART_Receive_IT(&huart1, &uart_rx_byte, 1);
   /* USER CODE BEGIN 2 */
 
 
@@ -109,6 +114,7 @@ int main(void)
 
   createTask("medium priority", task1, PRIORITY_MEDIUM, TASK_READY);
   createTask("low priority", task2, PRIORITY_LOW, TASK_READY);
+  createTask("uart shell", uart_command_task, PRIORITY_MEDIUM, TASK_READY);
   taskHandler3 = createTask("high priority", task3, PRIORITY_HIGH, TASK_BLOCKED);
 
   // Enable interrupt for pin 15 -- push button
@@ -223,16 +229,17 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA4 PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pin : PC13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA15 */
   GPIO_InitStruct.Pin = GPIO_PIN_15;
@@ -264,6 +271,30 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
       rtos_request_context_switch();
     }
   }
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance != USART1) {
+    return;
+  }
+
+  uint8_t ch = uart_rx_byte;
+
+  if (ch == '\r' || ch == '\n') {
+    if (uart_cmd_index > 0) {
+      uart_cmd_buffer[uart_cmd_index] = '\0';
+      uart_cmd_ready = 1;
+      uart_cmd_index = 0;
+    }
+  }
+  else {
+    if (uart_cmd_index < (sizeof(uart_cmd_buffer) - 1)) {
+      uart_cmd_buffer[uart_cmd_index++] = (char)ch;
+    }
+  }
+
+  HAL_UART_Receive_IT(huart, &uart_rx_byte, 1);
 }
 
 /* USER CODE END 4 */
